@@ -1,12 +1,17 @@
 CC = g++
-C_FLAGS = -std=c++11 -Wall -g
+CFLAGS = -Wall -std=c++11
+SOURCES_MAIN = main.cpp commands.cpp
+SOURCES_SLEEPER = sleeper.cpp
+EXECUTABLE_MAIN = my_program
+EXECUTABLE_SLEEPER = sleeper_program
 
-main: main.cpp
-	$(CC) $(C_FLAGS) -c main.cpp -o main.o
-	$(CC) -o main main.o
+all: $(EXECUTABLE_MAIN) $(EXECUTABLE_SLEEPER)
 
-sleep: sleeper.cpp
-	$(CC) $(C_FLAGS) -c sleeper.cpp -o sleeper.o
-	$(CC) -o sleeper sleeper.o
-clean: 
-	rm -f main main.o sleeper.o sleeper
+$(EXECUTABLE_MAIN): $(SOURCES_MAIN)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(EXECUTABLE_SLEEPER): $(SOURCES_SLEEPER)
+	$(CC) $(CFLAGS) $^ -o $@
+
+clean:
+	rm -f $(EXECUTABLE_MAIN) $(EXECUTABLE_SLEEPER)
