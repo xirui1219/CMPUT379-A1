@@ -15,8 +15,8 @@ int main()
     while (true)
     {
         string instruct;
-        cin >> instruct;
-        if (fork()==0){
+        getline(cin, instruct);
+        //if (fork()==0){
 
             if (instruct == "jobs")
             {
@@ -48,13 +48,13 @@ int main()
             }
             else{
                 // command input
-               parseInput();
+               parseInput(instruct);
             }
-        }
-        else
-        {
-            wait(nullptr);
-        }
+        //}
+        // else
+        // {
+        //     wait(nullptr);
+        // }
     }
 
     // jobs

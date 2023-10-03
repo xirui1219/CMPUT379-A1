@@ -11,11 +11,13 @@
 #include <cstring>
 using namespace std;
 
+void inputFile(char* args[], int arrySize);
+
 void jobs(){
                    // char *argv1[] = {"ps", "-u", NULL}; // Running processes
                 // char *argv2[] = {"ps", "-A", NULL}; // Completed processes
 
-                // cout << "Running Processes\n";
+                printf("Running Processes\n");
                 // int pipe_fd[2];
                 // if (pipe(pipe_fd) == -1)
                 // {
@@ -40,67 +42,24 @@ void jobs(){
                 //         perror("execve");
                 //     }
                 // }
-    int pipe_fd[2];
+            FILE* pipe = popen("ps -u | grep -v 'T' | grep -v 'Z'", "r");
+            if (!pipe) {
+                perror("popen");
+            }
 
-    // Create a pipe
-    if (pipe(pipe_fd) == -1) {
-        perror("pipe");
-    }
-
-    // Fork a child process
-    pid_t child_pid = fork();
-
-    if (child_pid == -1) {
-        perror("fork");
-    }
-
-    if (child_pid == 0) { // Child process
-        // Close the read end of the pipe (we only need to write to it)
-        close(pipe_fd[0]);
-
-        // Redirect stdout to the write end of the pipe
-        dup2(pipe_fd[1], STDOUT_FILENO);
-
-        // Close the write end of the pipe (now stdout is redirected)
-        close(pipe_fd[1]);
-
-        // Execute the ps -u command using execve
-        char* const ps_args[] = { (char*)"ps", (char*)"-u", NULL };
-        execve("/bin/ps", ps_args, NULL);
-
-        // execve will only return if there is an error
-        perror("execve");
-    } else { // Parent process
-        // Close the write end of the pipe (we only need to read from it)
-        close(pipe_fd[1]);
-
-        // Read and print the output of ps -u from the pipe
-        char buffer[1024];
-        ssize_t bytes_read;
-
-        while ((bytes_read = read(pipe_fd[0], buffer, sizeof(buffer))) > 0) {
-            // Null-terminate the buffer to treat it as a C string
-            buffer[bytes_read] = '\0';
-
-            // Check if the line contains " R " to identify running processes
-            char* running_indicator = strstr(buffer, " R ");
-            if (running_indicator != nullptr) {
-                // If found, print the line (which includes the elapsed time for running processes)
+            char buffer[1024];
+            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                // Process and print each line of the output
                 std::cout << buffer;
             }
-        }
 
-        // Close the read end of the pipe
-        close(pipe_fd[0]);
-
-        // Wait for the child process to complete
-        int status;
-        waitpid(child_pid, &status, 0);
-
-        if (WIFEXITED(status)) {
-            std::cout << "Child process exited with status " << WEXITSTATUS(status) << std::endl;
-        }
-    }
+            int status = pclose(pipe);
+            if (status == -1) {
+                perror("pclose");
+            } else {
+                std::cout << "Command exited with status " << status << std::endl;
+            }
+    
 };
 void kill(){
     int pid;
@@ -161,25 +120,71 @@ void wait(){
     waitpid(pid, &status, 0);
             
 };
-void parseInput(){
-    string cmd;
-    cin>>cmd;
-    stringstream ss(cmd);
-    string s;
-    vector<string> cmd_vec;
 
-    while (getline(ss,s, ' ')){
-        cmd_vec.push_back(s);
+void parseInput(string instruct){
+    const int maxCommandLength = 1024;
+    char command[instruct.length()];
+    strcpy(command, instruct.c_str());
+
+    // Tokenize the input into command and arguments
+    char* args[maxCommandLength];
+    char *inputToken = strchr(command, '<');
+    char* token = strtok(command, " ");
+    int argCount = 0;
+
+    while (token != nullptr && argCount < maxCommandLength) {
+        args[argCount] = token;
+        token = strtok(nullptr, " ");
+        argCount++;
     }
-    if (cmd.find('&')==string::npos && cmd.find('<')==string::npos && cmd.find('>')==string::npos){
-        //split cmd by spaces
+
+    args[argCount] = nullptr;
+
+    if (inputToken != nullptr){
+        
+        inputFile(args, argCount);
+    }
+    // Execute the command
+    pid_t child_pid = fork();
+
+    if (child_pid == -1) {
+        perror("fork");
+    }
+
+    if (child_pid == 0) { // Child process
+        execvp(args[0], args);
+
+        // execvp will only return if there is an error
+        perror("execvp");
+    } else { // Parent process
+        // Wait for the child process to complete
+        int status;
+        waitpid(child_pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            std::cout << "Child process exited with status " << WEXITSTATUS(status) << std::endl;
+        }
     }
 };
 void background(){
 
 };
-void inputFile(){
-
+void inputFile(char* args[], int arrySize){
+    const char * filename = args[1]+1;
+    int fd = open(filename, O_RDONLY);
+    char buffer[1024]; // Buffer to read lines
+    ssize_t bytesRead;
+    while ((bytesRead = read(fd, buffer, sizeof(buffer))) > 0) {
+        // Process and print each line
+        for (ssize_t i = 0; i < bytesRead; i++) {
+            if (buffer[i] == '\n') {
+                buffer[i] = '\0'; // Replace newline with null terminator
+                std::cout << buffer << std::endl;
+                // Reset the buffer for the next line
+                buffer[0] = '\0';
+            }
+        }
+    }
 };
 void outputFile(){
 
